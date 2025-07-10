@@ -29,6 +29,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -141,18 +142,21 @@ fun GalleryNavHost(
     onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
   }
 
-  HomeScreen(
-    modelManagerViewModel = modelManagerViewModel,
-    navigateToTaskScreen = { task ->
-      pickedTask = task
-      showModelManager = true
-
-      firebaseAnalytics?.logEvent(
-        "capability_select",
-        bundleOf("capability_name" to task.type.toString()),
+  // Automatically navigate to LLM chat with default model
+  LaunchedEffect(Unit) {
+    // Get the first available model for LLM chat
+    val llmChatTask = TASK_LLM_CHAT
+    val defaultModel = llmChatTask.models.firstOrNull()
+    
+    if (defaultModel != null) {
+      // Automatically navigate to LLM chat with the first available model
+      navigateToTaskScreen(
+        navController = navController,
+        taskType = TaskType.LLM_CHAT,
+        model = defaultModel,
       )
-    },
-  )
+    }
+  }
 
   // Model manager.
   AnimatedVisibility(
