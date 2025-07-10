@@ -186,7 +186,6 @@ fun ChatView(
             model = selectedModel,
           )
         },
-        onBackClicked = { handleNavigateUp() },
         onModelSelected = { model ->
           scope.launch { pagerState.animateScrollToPage(task.models.indexOf(model)) }
         },

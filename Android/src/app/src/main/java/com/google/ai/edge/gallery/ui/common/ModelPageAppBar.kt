@@ -63,7 +63,6 @@ fun ModelPageAppBar(
   task: Task,
   model: Model,
   modelManagerViewModel: ModelManagerViewModel,
-  onBackClicked: () -> Unit,
   onModelSelected: (Model) -> Unit,
   inProgress: Boolean,
   modelPreparing: Boolean,
@@ -74,6 +73,7 @@ fun ModelPageAppBar(
   onConfigChanged: (oldConfigValues: Map<String, Any>, newConfigValues: Map<String, Any>) -> Unit =
     { _, _ ->
     },
+  onBackClicked: (() -> Unit)? = null,
 ) {
   var showConfigDialog by remember { mutableStateOf(false) }
   val modelManagerUiState by modelManagerViewModel.uiState.collectAsState()
@@ -117,8 +117,10 @@ fun ModelPageAppBar(
     modifier = modifier,
     // The back button.
     navigationIcon = {
-      IconButton(onClick = onBackClicked) {
-        Icon(imageVector = Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "")
+      onBackClicked?.let { onClick ->
+        IconButton(onClick = onClick) {
+          Icon(imageVector = Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "")
+        }
       }
     },
     // The config button for the model (if existed).

@@ -123,7 +123,6 @@ fun LlmSingleTurnScreen(
         inProgress = uiState.inProgress,
         modelPreparing = uiState.preparing,
         onConfigChanged = { _, _ -> },
-        onBackClicked = { handleNavigateUp() },
         onModelSelected = { newSelectedModel ->
           scope.launch(Dispatchers.Default) {
             // Clean up current model.
