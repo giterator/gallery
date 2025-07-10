@@ -247,6 +247,31 @@ constructor(
         return@launch
       }
 
+      // Check if model is downloaded
+      val downloadStatus = uiState.value.modelDownloadStatus[model.name]
+      if (downloadStatus?.status != ModelDownloadStatusType.SUCCEEDED) {
+        Log.e(TAG, "Model '${model.name}' is not fully downloaded. Current status: ${downloadStatus?.status}")
+        updateModelInitializationStatus(
+          model = model,
+          status = ModelInitializationStatusType.ERROR,
+          error = "Model is not fully downloaded. Please wait for download to complete.",
+        )
+        return@launch
+      }
+
+      // Validate model file exists
+      val modelPath = model.getPath(context = context)
+      val modelFile = File(modelPath)
+      if (!modelFile.exists()) {
+        Log.e(TAG, "Model file does not exist: $modelPath")
+        updateModelInitializationStatus(
+          model = model,
+          status = ModelInitializationStatusType.ERROR,
+          error = "Model file not found. Please re-download the model.",
+        )
+        return@launch
+      }
+
       // Clean up.
       cleanupModel(task = task, model = model)
 

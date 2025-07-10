@@ -68,10 +68,42 @@ open class LlmChatViewModelBase(val curTask: Task) : ChatViewModel(task = curTas
       addMessage(model = model, message = ChatMessageLoading(accelerator = accelerator))
 
       // Wait for instance to be initialized.
+      var waitCount = 0
       while (model.instance == null) {
         delay(100)
+        waitCount++
+        if (waitCount > 100) { // 10 seconds timeout
+          Log.e(TAG, "Timeout waiting for model '${model.name}' to initialize")
+          Log.e(TAG, "Model status: ${LlmChatModelHelper.getModelStatus(model)}")
+          setInProgress(false)
+          setPreparing(false)
+          onError()
+          return@launch
+        }
       }
       delay(500)
+
+      // Validate model instance
+      if (model.instance == null) {
+        Log.e(TAG, "Model instance is still null after waiting for model '${model.name}'")
+        Log.e(TAG, "Model status: ${LlmChatModelHelper.getModelStatus(model)}")
+        setInProgress(false)
+        setPreparing(false)
+        onError()
+        return@launch
+      }
+
+      // Check if model is ready for inference
+      if (!LlmChatModelHelper.isModelReady(model)) {
+        Log.e(TAG, "Model '${model.name}' is not ready for inference")
+        Log.e(TAG, "Model status: ${LlmChatModelHelper.getModelStatus(model)}")
+        setInProgress(false)
+        setPreparing(false)
+        onError()
+        return@launch
+      }
+
+      Log.d(TAG, "Model '${model.name}' is ready for inference")
 
       // Run inference.
       val instance = model.instance as LlmModelInstance
@@ -140,6 +172,8 @@ open class LlmChatViewModelBase(val curTask: Task) : ChatViewModel(task = curTas
                 decodeSpeed = 0f
               }
 
+              // Update the last message with benchmark result.
+              val lastMessage = getLastMessage(model = model)
               if (lastMessage is ChatMessageText) {
                 updateLastTextMessageLlmBenchmarkResult(
                   model = model,
@@ -167,7 +201,7 @@ open class LlmChatViewModelBase(val curTask: Task) : ChatViewModel(task = curTas
           },
         )
       } catch (e: Exception) {
-        Log.e(TAG, "Error occurred while running inference", e)
+        Log.e(TAG, "Error occurred while running inference for model '${model.name}': ${e.message}", e)
         setInProgress(false)
         setPreparing(false)
         onError()
@@ -182,8 +216,19 @@ open class LlmChatViewModelBase(val curTask: Task) : ChatViewModel(task = curTas
     }
     viewModelScope.launch(Dispatchers.Default) {
       setInProgress(false)
-      val instance = model.instance as LlmModelInstance
-      instance.session.cancelGenerateResponseAsync()
+      
+      // Validate model instance exists
+      if (model.instance == null) {
+        Log.e(TAG, "Cannot stop response for model '${model.name}' - model instance is null")
+        return@launch
+      }
+      
+      try {
+        val instance = model.instance as LlmModelInstance
+        instance.session.cancelGenerateResponseAsync()
+      } catch (e: Exception) {
+        Log.e(TAG, "Error stopping response for model '${model.name}': ${e.message}", e)
+      }
     }
   }
 
@@ -193,12 +238,19 @@ open class LlmChatViewModelBase(val curTask: Task) : ChatViewModel(task = curTas
       clearAllMessages(model = model)
       stopResponse(model = model)
 
+      // Validate model instance exists
+      if (model.instance == null) {
+        Log.e(TAG, "Cannot reset session for model '${model.name}' - model instance is null")
+        setIsResettingSession(false)
+        return@launch
+      }
+
       while (true) {
         try {
           LlmChatModelHelper.resetSession(model = model)
           break
         } catch (e: Exception) {
-          Log.d(TAG, "Failed to reset session. Trying again")
+          Log.d(TAG, "Failed to reset session for model '${model.name}'. Trying again", e)
         }
         delay(200)
       }
@@ -209,9 +261,35 @@ open class LlmChatViewModelBase(val curTask: Task) : ChatViewModel(task = curTas
   fun runAgain(model: Model, message: ChatMessageText, onError: () -> Unit) {
     viewModelScope.launch(Dispatchers.Default) {
       // Wait for model to be initialized.
+      var waitCount = 0
       while (model.instance == null) {
         delay(100)
+        waitCount++
+        if (waitCount > 100) { // 10 seconds timeout
+          Log.e(TAG, "Timeout waiting for model '${model.name}' to initialize in runAgain")
+          Log.e(TAG, "Model status: ${LlmChatModelHelper.getModelStatus(model)}")
+          onError()
+          return@launch
+        }
       }
+
+      // Validate model instance
+      if (model.instance == null) {
+        Log.e(TAG, "Model instance is still null after waiting for model '${model.name}' in runAgain")
+        Log.e(TAG, "Model status: ${LlmChatModelHelper.getModelStatus(model)}")
+        onError()
+        return@launch
+      }
+
+      // Check if model is ready for inference
+      if (!LlmChatModelHelper.isModelReady(model)) {
+        Log.e(TAG, "Model '${model.name}' is not ready for inference in runAgain")
+        Log.e(TAG, "Model status: ${LlmChatModelHelper.getModelStatus(model)}")
+        onError()
+        return@launch
+      }
+
+      Log.d(TAG, "Model '${model.name}' is ready for inference in runAgain")
 
       // Clone the clicked message and add it.
       addMessage(model = model, message = message.clone())
@@ -227,6 +305,8 @@ open class LlmChatViewModelBase(val curTask: Task) : ChatViewModel(task = curTas
     modelManagerViewModel: ModelManagerViewModel,
     triggeredMessage: ChatMessageText?,
   ) {
+    Log.e(TAG, "Handling error for model '${model.name}'")
+    
     // Clean up.
     modelManagerViewModel.cleanupModel(task = task, model = model)
 
@@ -252,10 +332,12 @@ open class LlmChatViewModelBase(val curTask: Task) : ChatViewModel(task = curTas
     }
 
     // Re-initialize the session/engine.
+    Log.d(TAG, "Re-initializing model '${model.name}' after error")
     modelManagerViewModel.initializeModel(context = context, task = task, model = model)
 
     // Re-generate the response automatically.
     if (triggeredMessage != null) {
+      Log.d(TAG, "Re-generating response for model '${model.name}' after error")
       generateResponse(model = model, input = triggeredMessage.content, onError = {})
     }
   }
