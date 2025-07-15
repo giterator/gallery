@@ -52,9 +52,13 @@ import com.google.ai.edge.gallery.ui.common.ModelPageAppBar
 import com.google.ai.edge.gallery.ui.common.chat.ModelDownloadStatusInfoPanel
 import com.google.ai.edge.gallery.ui.modelmanager.ModelInitializationStatusType
 import com.google.ai.edge.gallery.ui.modelmanager.ModelManagerViewModel
+import com.google.ai.edge.gallery.ui.modelmanager.ModelManager
 import com.google.ai.edge.gallery.ui.theme.customColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 
 /** Navigation destination data */
 object LlmSingleTurnDestination {
@@ -78,6 +82,7 @@ fun LlmSingleTurnScreen(
   val context = LocalContext.current
   var navigatingUp by remember { mutableStateOf(false) }
   var showErrorDialog by remember { mutableStateOf(false) }
+  var showModelManager by remember { mutableStateOf(false) }
 
   val handleNavigateUp = {
     navigatingUp = true
@@ -132,6 +137,7 @@ fun LlmSingleTurnScreen(
             modelManagerViewModel.selectModel(model = newSelectedModel)
           }
         },
+        onManageModelsClicked = { showModelManager = true },
       )
     },
   ) { innerPadding ->
@@ -206,6 +212,24 @@ fun LlmSingleTurnScreen(
         )
       }
     }
+  }
+
+  // Model manager overlay
+  AnimatedVisibility(
+    visible = showModelManager,
+    enter = slideInHorizontally(initialOffsetX = { it }),
+    exit = slideOutHorizontally(targetOffsetX = { it }),
+  ) {
+    ModelManager(
+      viewModel = modelManagerViewModel,
+      task = task,
+      onModelClicked = { model ->
+        // Update selected model
+        modelManagerViewModel.selectModel(model = model)
+        showModelManager = false
+      },
+      navigateUp = { showModelManager = false },
+    )
   }
 }
 

@@ -26,7 +26,9 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -64,8 +66,10 @@ import com.google.ai.edge.gallery.data.Model
 import com.google.ai.edge.gallery.data.ModelDownloadStatusType
 import com.google.ai.edge.gallery.data.Task
 import com.google.ai.edge.gallery.ui.common.ModelPageAppBar
+import com.google.ai.edge.gallery.ui.common.ErrorDialog
 import com.google.ai.edge.gallery.ui.modelmanager.ModelManagerViewModel
 import com.google.ai.edge.gallery.ui.modelmanager.PagerScrollState
+import com.google.ai.edge.gallery.ui.modelmanager.ModelManager
 import kotlin.math.absoluteValue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -102,6 +106,7 @@ fun ChatView(
   val selectedModel = modelManagerUiState.selectedModel
   var selectedImage by remember { mutableStateOf<Bitmap?>(null) }
   var showImageViewer by remember { mutableStateOf(false) }
+  var showErrorDialog by remember { mutableStateOf(false) }
 
   val pagerState =
     rememberPagerState(
@@ -111,6 +116,7 @@ fun ChatView(
   val context = LocalContext.current
   val scope = rememberCoroutineScope()
   var navigatingUp by remember { mutableStateOf(false) }
+  var showModelManager by remember { mutableStateOf(false) }
 
   val handleNavigateUp = {
     navigatingUp = true
@@ -189,6 +195,7 @@ fun ChatView(
         onModelSelected = { model ->
           scope.launch { pagerState.animateScrollToPage(task.models.indexOf(model)) }
         },
+        onManageModelsClicked = { showModelManager = true },
       )
     },
   ) { innerPadding ->
@@ -295,6 +302,44 @@ fun ChatView(
         }
       }
     }
+  }
+
+  // Model manager overlay
+  AnimatedVisibility(
+    visible = showModelManager,
+    enter = slideInHorizontally(initialOffsetX = { it }),
+    exit = slideOutHorizontally(targetOffsetX = { it }),
+  ) {
+    ModelManager(
+      viewModel = modelManagerViewModel,
+      task = task,
+      onModelClicked = { model ->
+        // Navigate to the selected model
+        scope.launch { pagerState.animateScrollToPage(task.models.indexOf(model)) }
+        showModelManager = false
+      },
+      navigateUp = { showModelManager = false },
+    )
+  }
+
+  // Error dialog.
+  val modelInitializationStatus = modelManagerUiState.modelInitializationStatus[selectedModel.name]
+  if (showErrorDialog) {
+    val errorMsg = modelInitializationStatus?.error ?: ""
+    val isCorruptModel = errorMsg.contains("corrupted", ignoreCase = true) ||
+      errorMsg.contains("not a valid model archive", ignoreCase = true)
+    ErrorDialog(
+      error = errorMsg,
+      onDismiss = { showErrorDialog = false },
+      actionLabel = if (isCorruptModel) "Re-download Model" else null,
+      onAction = if (isCorruptModel) {
+        {
+          showErrorDialog = false
+          // Delete and re-download the model
+          modelManagerViewModel.downloadModel(task, selectedModel)
+        }
+      } else null,
+    )
   }
 }
 

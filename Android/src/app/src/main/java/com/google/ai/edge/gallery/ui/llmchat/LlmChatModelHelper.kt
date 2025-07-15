@@ -33,6 +33,7 @@ import com.google.mediapipe.tasks.genai.llminference.GraphOptions
 import com.google.mediapipe.tasks.genai.llminference.LlmInference
 import com.google.mediapipe.tasks.genai.llminference.LlmInferenceSession
 import java.io.File
+import java.util.zip.ZipFile
 
 private const val TAG = "AGLlmChatModelHelper"
 
@@ -146,6 +147,21 @@ object LlmChatModelHelper {
     }
   }
 
+  private fun isValidModelFile(modelFile: File): Boolean {
+    if (!modelFile.exists() || modelFile.length() < 1024 * 1024) {
+        Log.e(TAG, "Model file is too small or doesn't exist: "+modelFile.length()+" bytes")
+        return false
+    }
+    return try {
+        ZipFile(modelFile).use { zip ->
+            zip.entries().asSequence().any() // At least one entry
+        }
+    } catch (e: Exception) {
+        Log.e(TAG, "Model file is not a valid ZIP archive: ${e.message}", e)
+        false
+    }
+}
+
   /**
    * Provides a user-friendly error message for GPU initialization failures.
    */
@@ -192,6 +208,12 @@ object LlmChatModelHelper {
       return
     }
     
+    if (!isValidModelFile(modelFile)) {
+      Log.e(TAG, "Model file '${modelFile.absolutePath}' appears to be corrupted or invalid")
+      onDone("Model file is corrupted or not a valid model archive. Please re-download the model.")
+      return
+    }
+
     Log.d(TAG, "Model file exists and has size: ${modelFile.length()} bytes")
     
     // Prepare options.

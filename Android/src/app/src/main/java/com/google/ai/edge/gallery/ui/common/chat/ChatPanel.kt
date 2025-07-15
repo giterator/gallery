@@ -504,44 +504,18 @@ fun ChatPanel(
     // Chat input
     when (chatInputType) {
       ChatInputType.TEXT -> {
-        //        val isLlmTask = task.type == TaskType.LLM_CHAT
-        //        val notLlmStartScreen = !(messages.size == 1 && messages[0] is
-        // ChatMessagePromptTemplates)
-        MessageInputText(
-          modelManagerViewModel = modelManagerViewModel,
-          curMessage = curMessage,
-          inProgress = uiState.inProgress,
-          isResettingSession = uiState.isResettingSession,
-          modelPreparing = uiState.preparing,
-          imageMessageCount = imageMessageCountToLastConfigChange,
-          audioClipMessageCount = audioClipMesssageCountToLastconfigChange,
-          modelInitializing =
-            modelInitializationStatus?.status == ModelInitializationStatusType.INITIALIZING,
-          textFieldPlaceHolderRes = task.textInputPlaceHolderRes,
-          onValueChanged = { curMessage = it },
-          onSendMessage = {
-            onSendMessage(selectedModel, it)
-            curMessage = ""
-          },
-          onOpenPromptTemplatesClicked = {
+        // Show CAN codes display instead of regular text input
+        val canCodes = listOf("P0101", "C0035", "U0100")
+        CanCodesDisplay(
+          canCodes = canCodes,
+          onSendCodes = {
+            // Send the CAN codes as a single message to the LLM
+            val canCodesText = "Please analyze these automotive diagnostic trouble codes (DTCs) and provide a detailed explanation of what each code means, potential causes, and recommended diagnostic steps: ${canCodes.joinToString(", ")}"
             onSendMessage(
               selectedModel,
-              listOf(
-                ChatMessagePromptTemplates(
-                  templates = selectedModel.llmPromptTemplates,
-                  showMakeYourOwn = false,
-                )
-              ),
+              listOf(ChatMessageText(content = canCodesText, side = ChatSide.USER))
             )
           },
-          onStopButtonClicked = onStopButtonClicked,
-          //          showPromptTemplatesInMenu = isLlmTask && notLlmStartScreen,
-          showPromptTemplatesInMenu = false,
-          showImagePickerInMenu =
-            selectedModel.llmSupportImage && task.type === TaskType.LLM_ASK_IMAGE,
-          showAudioItemsInMenu =
-            selectedModel.llmSupportAudio && task.type === TaskType.LLM_ASK_AUDIO,
-          showStopButtonWhenInProgress = showStopButtonInInputWhenInProgress,
         )
       }
 

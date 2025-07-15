@@ -76,9 +76,16 @@ fun ModelItemActionButton(
 
       // Button to delete the download.
       ModelDownloadStatusType.SUCCEEDED -> {
-        if (showDeleteButton) {
-          IconButton(onClick = { showConfirmDeleteDialog = true }) {
-            Icon(Icons.Rounded.Delete, contentDescription = "", tint = getTaskIconColor(task))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          // Re-download button
+          IconButton(onClick = { onDownloadClicked(model) }) {
+            Icon(Icons.Rounded.FileDownload, contentDescription = "Re-download", tint = getTaskIconColor(task))
+          }
+          // Delete button
+          if (showDeleteButton) {
+            IconButton(onClick = { showConfirmDeleteDialog = true }) {
+              Icon(Icons.Rounded.Delete, contentDescription = "Delete", tint = getTaskIconColor(task))
+            }
           }
         }
       }

@@ -28,6 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.MapsUgc
 import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -74,6 +75,7 @@ fun ModelPageAppBar(
     { _, _ ->
     },
   onBackClicked: (() -> Unit)? = null,
+  onManageModelsClicked: (() -> Unit)? = null,
 ) {
   var showConfigDialog by remember { mutableStateOf(false) }
   val modelManagerUiState by modelManagerViewModel.uiState.collectAsState()
@@ -128,56 +130,73 @@ fun ModelPageAppBar(
       val downloadSucceeded = curDownloadStatus?.status == ModelDownloadStatusType.SUCCEEDED
       val showConfigButton = model.configs.isNotEmpty() && downloadSucceeded
       val showResetSessionButton = canShowResetSessionButton && downloadSucceeded
-      Box(modifier = Modifier.size(42.dp), contentAlignment = Alignment.Center) {
-        var configButtonOffset = 0.dp
-        if (showConfigButton && canShowResetSessionButton) {
-          configButtonOffset = (-40).dp
-        }
-        val isModelInitializing =
-          modelInitializationStatus?.status == ModelInitializationStatusType.INITIALIZING
-        if (showConfigButton) {
-          val enableConfigButton = !isModelInitializing && !inProgress
-          IconButton(
-            onClick = { showConfigDialog = true },
-            enabled = enableConfigButton,
-            modifier =
-              Modifier.offset(x = configButtonOffset).alpha(if (!enableConfigButton) 0.5f else 1f),
-          ) {
+      Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+      ) {
+        // Manage Models button
+        onManageModelsClicked?.let { onClick ->
+          IconButton(onClick = onClick) {
             Icon(
-              imageVector = Icons.Rounded.Tune,
-              contentDescription = "",
+              imageVector = Icons.Rounded.Settings,
+              contentDescription = "Manage Models",
               tint = MaterialTheme.colorScheme.primary,
               modifier = Modifier.size(20.dp),
             )
           }
         }
-        if (showResetSessionButton) {
-          if (isResettingSession) {
-            CircularProgressIndicator(
-              trackColor = MaterialTheme.colorScheme.surfaceVariant,
-              strokeWidth = 2.dp,
-              modifier = Modifier.size(16.dp),
-            )
-          } else {
-            val enableResetButton = !isModelInitializing && !modelPreparing
+        
+        Box(modifier = Modifier.size(42.dp), contentAlignment = Alignment.Center) {
+          var configButtonOffset = 0.dp
+          if (showConfigButton && canShowResetSessionButton) {
+            configButtonOffset = (-40).dp
+          }
+          val isModelInitializing =
+            modelInitializationStatus?.status == ModelInitializationStatusType.INITIALIZING
+          if (showConfigButton) {
+            val enableConfigButton = !isModelInitializing && !inProgress
             IconButton(
-              onClick = { onResetSessionClicked(model) },
-              enabled = enableResetButton,
-              modifier = Modifier.alpha(if (!enableResetButton) 0.5f else 1f),
+              onClick = { showConfigDialog = true },
+              enabled = enableConfigButton,
+              modifier =
+                Modifier.offset(x = configButtonOffset).alpha(if (!enableConfigButton) 0.5f else 1f),
             ) {
-              Box(
-                modifier =
-                  Modifier.size(32.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceContainer),
-                contentAlignment = Alignment.Center,
+              Icon(
+                imageVector = Icons.Rounded.Tune,
+                contentDescription = "",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp),
+              )
+            }
+          }
+          if (showResetSessionButton) {
+            if (isResettingSession) {
+              CircularProgressIndicator(
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                strokeWidth = 2.dp,
+                modifier = Modifier.size(16.dp),
+              )
+            } else {
+              val enableResetButton = !isModelInitializing && !modelPreparing
+              IconButton(
+                onClick = { onResetSessionClicked(model) },
+                enabled = enableResetButton,
+                modifier = Modifier.alpha(if (!enableResetButton) 0.5f else 1f),
               ) {
-                Icon(
-                  imageVector = Icons.Rounded.MapsUgc,
-                  contentDescription = "",
-                  tint = MaterialTheme.colorScheme.primary,
-                  modifier = Modifier.size(20.dp),
-                )
+                Box(
+                  modifier =
+                    Modifier.size(32.dp)
+                      .clip(CircleShape)
+                      .background(MaterialTheme.colorScheme.surfaceContainer),
+                  contentAlignment = Alignment.Center,
+                ) {
+                  Icon(
+                    imageVector = Icons.Rounded.MapsUgc,
+                    contentDescription = "",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp),
+                  )
+                }
               }
             }
           }

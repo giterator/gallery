@@ -32,7 +32,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 
 @Composable
-fun ErrorDialog(error: String, onDismiss: () -> Unit) {
+fun ErrorDialog(
+  error: String,
+  onDismiss: () -> Unit,
+  actionLabel: String? = null,
+  onAction: (() -> Unit)? = null,
+) {
   Dialog(onDismissRequest = onDismiss) {
     Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
       Column(
@@ -54,6 +59,11 @@ fun ErrorDialog(error: String, onDismiss: () -> Unit) {
         )
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+          if (actionLabel != null && onAction != null) {
+            Button(onClick = onAction, modifier = Modifier.padding(end = 8.dp)) {
+              Text(actionLabel)
+            }
+          }
           Button(onClick = onDismiss) { Text("Close") }
         }
       }
