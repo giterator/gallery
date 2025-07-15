@@ -506,17 +506,31 @@ fun ChatPanel(
       ChatInputType.TEXT -> {
         // Show CAN codes display instead of regular text input
         val canCodes = listOf("P0101", "C0035", "U0100")
-        CanCodesDisplay(
-          canCodes = canCodes,
-          onSendCodes = {
-            // Send the CAN codes as a single message to the LLM
-            val canCodesText = "Please analyze these automotive diagnostic trouble codes (DTCs) and provide a detailed explanation of what each code means, potential causes, and recommended diagnostic steps: ${canCodes.joinToString(", ")}"
-            onSendMessage(
-              selectedModel,
-              listOf(ChatMessageText(content = canCodesText, side = ChatSide.USER))
-            )
-          },
-        )
+        Column {
+          CanCodesDisplay(
+            canCodes = canCodes,
+            onSendCodes = {
+              // Send the CAN codes as a single message to the LLM
+              val canCodesText = "Please analyze these automotive diagnostic trouble codes (DTCs) and provide a detailed explanation of what each code means, potential causes, and recommended diagnostic steps: ${canCodes.joinToString(", ")}"
+              onSendMessage(
+                selectedModel,
+                listOf(ChatMessageText(content = canCodesText, side = ChatSide.USER))
+              )
+            },
+          )
+          if (uiState.inProgress) {
+            androidx.compose.material3.Button(
+              onClick = { onStopButtonClicked() },
+              modifier = Modifier.padding(top = 8.dp).fillMaxWidth()
+            ) {
+              Icon(
+                imageVector = Icons.Rounded.Refresh, // You can use a stop icon if available
+                contentDescription = "Stop generation"
+              )
+              Text("Stop Generating", modifier = Modifier.padding(start = 8.dp))
+            }
+          }
+        }
       }
 
       ChatInputType.IMAGE ->
